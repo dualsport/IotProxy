@@ -60,7 +60,7 @@ def parse_url(url):
     else:
         return {'Error': 'Redirect target does not exist'}
     return {'base': base,
-            'endpoint': '/'.join(url_parts[1:])
+            'endpoint': '/'.join(url_parts[1:]) + '/'
            }
  
 
@@ -80,12 +80,12 @@ def parse_json(req_data):
 
 def fwd_post(base_url, api, token, parameters):
     api_endpoint = urljoin(base_url, api)
-    headers = {'Content-Type': 'application/json',
-                'Authorization': token,
-                }
+    headers = {'Host': base_url.split('//')[1][:-1],
+               'Content-Type': 'application/json',
+               'Authorization': token,
+              }
     post = requests.post(url=api_endpoint, headers=headers, json=parameters)
     return post
-
 
 
 if __name__ == "__main__":
