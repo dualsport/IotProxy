@@ -14,21 +14,20 @@
 
 import socket
 import sys
+import os
 import threading
 import json
 from time import sleep
 import requests
 from urllib.parse import urljoin
+import settings as s
 
 
-host = ''
-listening_port = 8080
-max_conn = 5
-buffer_size = 4096
-redirect_sites = {'iot-stg-redirect': 'https://iot-stg.redcatmfg.com',
-                  'iot-redirect': 'https://iot.redcatmfg.com'}
-tokens = {'https://iot-stg.redcatmfg.com': 'Token d9bcbcc509f360b46684f86ca4532e66562dac66',
-          'https://iot.redcatmfg.com': 'Token a0444fc04865a861fb5dc291f50483264e74a8a6'}
+host = os.getenv('HOST', '')
+listening_port = os.getenv('LISTENING_PORT')
+max_conn = os.getenv('MAX_CONN')
+buffer_size os.getenv('2048')
+redirect_sites = s.redirect_sites
 
 
 def handle_connect(conn, addr, data):
@@ -43,8 +42,10 @@ def handle_connect(conn, addr, data):
     elif 'Error' in jsn:
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
     else:
-        srv_response = api_post(url_parts['base'], url_parts['endpoint'],
-                                 tokens[url_parts['base']], jsn)
+        srv_response = api_post(url_parts['base'],
+                                url_parts['endpoint'],
+                                redirect_sites[url_parts['target']]['token'],
+                                jsn)
 
         client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
         client_response += srv_response.reason + '\r\n'
@@ -59,10 +60,11 @@ def parse_url(url):
     url_parts = [i for i in url.split('/') if i]
     target = url_parts[0]
     if target in redirect_sites:
-        base = redirect_sites[target]
+        base = redirect_sites[target]['url']
     else:
         return {'Error': 'Redirect target does not exist'}
-    return {'base': base,
+    return {'target': target,
+            'base': base,
             'endpoint': '/'.join(url_parts[1:]) + '/'
            }
  
