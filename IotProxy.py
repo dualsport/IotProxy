@@ -11,9 +11,9 @@ host = ''
 listening_port = 8080
 max_conn = 5
 buffer_size = 4096
-redirect_sites = {'iot-stg-redirect': 'https://iot-stg.redcatmfg.com/',
+redirect_sites = {'iot-stg-redirect': 'https://iot-stg.redcatmfg.com',
                   'iot-redirect': 'https://iot.redcatmfg.com'}
-tokens = {'https://iot-stg.redcatmfg.com/': 'Token d9bcbcc509f360b46684f86ca4532e66562dac66',
+tokens = {'https://iot-stg.redcatmfg.com': 'Token d9bcbcc509f360b46684f86ca4532e66562dac66',
           'https://iot.redcatmfg.com': 'Token a0444fc04865a861fb5dc291f50483264e74a8a6'}
 
 
@@ -30,25 +30,15 @@ def handle_connect(conn, addr, data):
     elif 'Error' in jsn:
         response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
     else:
-        response = 'HTTP/1.0 202 Accepted\r\nContent-Type: text/plain\r\n\r\nAccepted\r\n'
-    conn.send(response.encode('ascii'))
-    conn.close()
-    print(addr, url_parts, jsn)
-    tries = 0
-    while tries < 3:
         post_response = fwd_post(url_parts['base'], url_parts['endpoint'],
                                  tokens[url_parts['base']], jsn)
-        print(f'Response code: {post_response.status_code}')
-        print(post_response.request.headers)
-        print(post_response.request.body)
-        print(f'Response content: {post_response.content}\n')
 
-        if int(int(post_response.status_code) / 100) == 2:
-            break
-        else:
-            # Post call failed
-            sleep(5)
-            tries += 1
+        response = 'HTTP/1.0 ' + str(post_response.status_code) + ' '
+        response += post_response.reason + '\r\n'
+        response += 'Content-Type: ' + post_response.headers['Content-Type']
+        response += '\r\n\r\n' + post_response.content.decode('ASCII') + '\r\n'
+    conn.send(response.encode('ascii'))
+    conn.close()
 
 
 def parse_url(url):
@@ -80,7 +70,7 @@ def parse_json(req_data):
 
 def fwd_post(base_url, api, token, parameters):
     api_endpoint = urljoin(base_url, api)
-    headers = {'Host': base_url.split('//')[1][:-1],
+    headers = {'Host': base_url.split('//')[1],
                'Content-Type': 'application/json',
                'Authorization': token,
               }
