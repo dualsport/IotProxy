@@ -1,3 +1,17 @@
+# Simple IOT Proxy Server
+# Forwards POST calls with JSON payloads ONLY
+# Returns server respons to client
+# Client device POSTs to proxy IP as follows:
+#  '192.168.0.99:8080/redirect-site-code/api/endpoint/' + json data
+# Proxy replaces 'redirect-site-code' with actual site address from lookup
+#  'https://actual-site/api/endpoint/' + json data
+# Proxy replies to client with reply from server
+# Each request received starts new thread to handle connection
+# Proxy is supplies authentication to server
+
+# Todo: Handle internet outage - Store request locally, return 202 Accepted to client
+
+
 import socket
 import sys
 import threading
@@ -18,31 +32,30 @@ tokens = {'https://iot-stg.redcatmfg.com': 'Token d9bcbcc509f360b46684f86ca4532e
 
 
 def handle_connect(conn, addr, data):
-    # print(f'addr: {addr}')  # Return address
     first_line = data.split('\n')[0]
     method = first_line.split(' ')[0]
     url_parts = parse_url(first_line.split(' ')[1])
     jsn = parse_json(data)
     if method != 'POST':
-        response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nMethod ' + method + ' not allowed\r\n'
+        client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nMethod ' + method + ' not allowed\r\n'
     elif 'Error' in url_parts:
-        response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + url_parts['Error'] + '\r\n'
+        client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + url_parts['Error'] + '\r\n'
     elif 'Error' in jsn:
-        response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
+        client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
     else:
-        post_response = fwd_post(url_parts['base'], url_parts['endpoint'],
+        srv_response = api_post(url_parts['base'], url_parts['endpoint'],
                                  tokens[url_parts['base']], jsn)
 
-        response = 'HTTP/1.0 ' + str(post_response.status_code) + ' '
-        response += post_response.reason + '\r\n'
-        response += 'Content-Type: ' + post_response.headers['Content-Type']
-        response += '\r\n\r\n' + post_response.content.decode('ASCII') + '\r\n'
-    conn.send(response.encode('ascii'))
+        client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
+        client_response += srv_response.reason + '\r\n'
+        client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
+        client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
+    conn.send(client_response.encode('ascii'))
     conn.close()
 
 
 def parse_url(url):
-    # Split & remove empty strings
+    # Returns base url and api endpoint
     url_parts = [i for i in url.split('/') if i]
     target = url_parts[0]
     if target in redirect_sites:
@@ -55,6 +68,7 @@ def parse_url(url):
  
 
 def parse_json(req_data):
+    # Returns valid JSON from request
     json_beg = req_data.find('{')
     json_end = req_data.rfind('}') + 1
 
@@ -68,7 +82,8 @@ def parse_json(req_data):
     return parsed_data
 
 
-def fwd_post(base_url, api, token, parameters):
+def api_post(base_url, api, token, parameters):
+    # Post to api endpoint
     api_endpoint = urljoin(base_url, api)
     headers = {'Host': base_url.split('//')[1],
                'Content-Type': 'application/json',
