@@ -1,7 +1,8 @@
 __pycache__/
+.vs/
 
 settings.py
 
-Test*
-test*
+Test*.py
+test*.py
 
