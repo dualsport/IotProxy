@@ -24,9 +24,9 @@ import settings as s
 
 
 host = os.getenv('HOST', '')
-listening_port = os.getenv('LISTENING_PORT')
-max_conn = os.getenv('MAX_CONN')
-buffer_size os.getenv('2048')
+listening_port = int(os.getenv('LISTENING_PORT'))
+max_conn = int(os.getenv('MAX_CONN'))
+buffer_size = int(os.getenv('BUFFER_SIZE'))
 redirect_sites = s.redirect_sites
 
 
