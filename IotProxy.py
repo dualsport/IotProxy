@@ -116,4 +116,5 @@ if __name__ == "__main__":
         print(f'Listening on: {host}:{listening_port}')
         conn, addr = s.accept()  # Accept incoming client connection
         data = conn.recv(buffer_size).decode()  # Receive data
+        print(f'Data recd: {data}')
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
