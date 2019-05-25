@@ -23,10 +23,10 @@ from urllib.parse import urljoin
 import settings as s
 
 
-host = os.getenv('HOST', '')
-listening_port = int(os.getenv('LISTENING_PORT'))
-max_conn = int(os.getenv('MAX_CONN'))
-buffer_size = int(os.getenv('BUFFER_SIZE'))
+host = os.getenv('HOST', '192.168.0.10')
+listening_port = int(os.getenv('LISTENING_PORT', '8080'))
+max_conn = int(os.getenv('MAX_CONN', '5'))
+buffer_size = int(os.getenv('BUFFER_SIZE', '4096'))
 redirect_sites = s.redirect_sites
 
 

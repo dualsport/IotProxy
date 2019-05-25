@@ -8,12 +8,12 @@ COPY settings.py /app
 
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
-EXPOSE 8080
+EXPOSE 80
 
-ENV HOST
-ENV LISTENING_PORT 8080
+ENV HOST 0.0.0.0
+ENV LISTENING_PORT 80
 ENV MAX_CONN 5
-ENV BUFFER_SIZE 2048
+ENV BUFFER_SIZE 4096
 
 CMD ["python", "IotProxy.py"]
 
