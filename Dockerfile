@@ -15,5 +15,5 @@ ENV LISTENING_PORT 80
 ENV MAX_CONN 5
 ENV BUFFER_SIZE 4096
 
-CMD ["python", "IotProxy.py"]
+CMD ["python", "-u", "IotProxy.py"]
 

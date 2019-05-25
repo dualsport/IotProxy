@@ -56,8 +56,9 @@ def handle_connect(conn, addr, data):
         client_response += srv_response.reason + '\r\n'
         client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
         client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
-    print(srv_response.status_code)
+        print(srv_response.status_code)
     print('Sending response to client')
+    print(client_response)
     conn.send(client_response.encode('ascii'))
     print('Closing conncetion')
     conn.close()
@@ -110,6 +111,7 @@ if __name__ == "__main__":
     s.listen(max_conn)  # Start listening
 
     while True:
+        print(f'Listening on: {host}:{listening_port}')
         conn, addr = s.accept()  # Accept incoming client connection
         data = conn.recv(buffer_size).decode()  # Receive data
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
