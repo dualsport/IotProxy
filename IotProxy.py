@@ -31,6 +31,7 @@ redirect_sites = s.redirect_sites
 
 
 def handle_connect(conn, addr, data):
+    print('Handling connection...\n')
     first_line = data.split('\n')[0]
     method = first_line.split(' ')[0]
     url_parts = parse_url(first_line.split(' ')[1])
@@ -42,6 +43,10 @@ def handle_connect(conn, addr, data):
     elif 'Error' in jsn:
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
     else:
+        b = url_parts['base']
+        e = url_parts['endpoint']
+        print(f'Base: {b}\n')
+        print(f'Endpoint: {e}\n')
         srv_response = api_post(url_parts['base'],
                                 url_parts['endpoint'],
                                 redirect_sites[url_parts['target']]['token'],
@@ -51,8 +56,12 @@ def handle_connect(conn, addr, data):
         client_response += srv_response.reason + '\r\n'
         client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
         client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
+    print(srv_response.status_code)
+    print('Sending response to client')
     conn.send(client_response.encode('ascii'))
+    print('Closing conncetion')
     conn.close()
+    print('Done handling connection.')
 
 
 def parse_url(url):
