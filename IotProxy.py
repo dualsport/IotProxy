@@ -21,6 +21,7 @@ from time import sleep
 import requests
 from urllib.parse import urljoin
 import settings as s
+import datetime
 
 
 host = os.getenv('HOST', '192.168.0.10')
@@ -59,10 +60,10 @@ def handle_connect(conn, addr, data):
         client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
         client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
         print(srv_response.status_code)
-    print('Sending response to client')
+    print(f'Sending response to client {datetime.datetime.now().time()}')
     print(client_response)
     conn.send(client_response.encode('ascii'))
-    print('Closing conncetion')
+    print(f'Closing connection {datetime.datetime.now().time()}')
     conn.close()
     print('Done handling connection.')
 
@@ -116,13 +117,16 @@ if __name__ == "__main__":
         conn, addr = s.accept()  # Accept incoming client connection
         conn.settimeout(1)
         data = ''
+        print(f'New connection. {datetime.datetime.now().time()}')
         while True:
+            print(f'Recv data {datetime.datetime.now().time()}')
             try:
                 new_data = conn.recv(buffer_size)  # Receive data
                 if not new_data:
                     break
                 data += new_data.decode()
             except socket.timeout:
+                print(f'Timed out {datetime.datetime.now().time()}')
                 break
-        print(f'Data recd: {data}')
+        print(f'Data recd: {data} {datetime.datetime.now().time()}')
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
