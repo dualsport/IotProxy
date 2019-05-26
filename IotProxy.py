@@ -111,10 +111,18 @@ if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Initiate socket
     s.bind((host, listening_port))  # Bind socket for listening
     s.listen(max_conn)  # Start listening
-
     while True:
         print(f'Listening on: {host}:{listening_port}')
         conn, addr = s.accept()  # Accept incoming client connection
-        data = conn.recv(buffer_size).decode()  # Receive data
+        conn.settimeout(1)
+        data = ''
+        while True:
+            try:
+                new_data = conn.recv(buffer_size)  # Receive data
+                if not new_data:
+                    break
+                data += new_data.decode()
+            except socket.timeout:
+                break
         print(f'Data recd: {data}')
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
