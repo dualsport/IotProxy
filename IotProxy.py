@@ -32,7 +32,7 @@ redirect_sites = s.redirect_sites
 
 
 def handle_connect(conn, addr, data):
-    print('Handling connection...\n')
+    print(f'Handling connection...{datetime.datetime.now().time()}\n')
     first_line = data.split('\n')[0]
     method = first_line.split(' ')[0]
     url_parts = parse_url(first_line.split(' ')[1])
@@ -50,16 +50,16 @@ def handle_connect(conn, addr, data):
         e = url_parts['endpoint']
         print(f'Base: {b}\n')
         print(f'Endpoint: {e}\n')
+        print(f'Making API call {datetime.datetime.now().time()}')
         srv_response = api_post(url_parts['base'],
                                 url_parts['endpoint'],
                                 redirect_sites[url_parts['target']]['token'],
                                 jsn)
-
+        print(f'Response received: {srv_response.status_code} {datetime.datetime.now().time()}')
         client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
         client_response += srv_response.reason + '\r\n'
         client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
         client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
-        print(srv_response.status_code)
     print(f'Sending response to client {datetime.datetime.now().time()}')
     print(client_response)
     conn.send(client_response.encode('ascii'))
@@ -112,21 +112,21 @@ if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Initiate socket
     s.bind((host, listening_port))  # Bind socket for listening
     s.listen(max_conn)  # Start listening
+    print(f'Listening on: {host}:{listening_port}')
     while True:
-        print(f'Listening on: {host}:{listening_port}')
         conn, addr = s.accept()  # Accept incoming client connection
         conn.settimeout(1)
         data = ''
         print(f'New connection. {datetime.datetime.now().time()}')
         while True:
-            print(f'Recv data {datetime.datetime.now().time()}')
+            #print(f'Recv data {datetime.datetime.now().time()}')
             try:
                 new_data = conn.recv(buffer_size)  # Receive data
                 if not new_data:
                     break
                 data += new_data.decode()
             except socket.timeout:
-                print(f'Timed out {datetime.datetime.now().time()}')
+                #print(f'Timed out {datetime.datetime.now().time()}')
                 break
         print(f'Data recd: {data} {datetime.datetime.now().time()}')
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
