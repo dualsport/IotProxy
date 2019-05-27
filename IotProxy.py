@@ -32,7 +32,7 @@ redirect_sites = s.redirect_sites
 
 
 def handle_connect(conn, addr, data):
-    print(f'Handling connection...{datetime.datetime.now().time()}\n')
+    print(f'Handling connection...{datetime.datetime.now()}\n')
     first_line = data.split('\n')[0]
     method = first_line.split(' ')[0]
     url_parts = parse_url(first_line.split(' ')[1])
@@ -43,29 +43,20 @@ def handle_connect(conn, addr, data):
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + url_parts['Error'] + '\r\n'
     elif 'Error' in jsn:
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
-        print(f'Data: {data}')
-        print(f'Json: {jsn}')
     else:
         b = url_parts['base']
         e = url_parts['endpoint']
-        print(f'Base: {b}\n')
-        print(f'Endpoint: {e}\n')
-        print(f'Making API call {datetime.datetime.now().time()}')
         srv_response = api_post(url_parts['base'],
                                 url_parts['endpoint'],
                                 redirect_sites[url_parts['target']]['token'],
                                 jsn)
-        print(f'Response received: {srv_response.status_code} {datetime.datetime.now().time()}')
         client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
         client_response += srv_response.reason + '\r\n'
         client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
         client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
-    print(f'Sending response to client {datetime.datetime.now().time()}')
-    print(client_response)
     conn.send(client_response.encode('ascii'))
-    print(f'Closing connection {datetime.datetime.now().time()}')
     conn.close()
-    print('Done handling connection.')
+    print(f'Done handling connection. {datetime.datetime.now()}')
 
 
 def parse_url(url):
@@ -119,14 +110,11 @@ if __name__ == "__main__":
         data = ''
         print(f'New connection. {datetime.datetime.now().time()}')
         while True:
-            #print(f'Recv data {datetime.datetime.now().time()}')
             try:
                 new_data = conn.recv(buffer_size)  # Receive data
                 if not new_data:
                     break
                 data += new_data.decode()
             except socket.timeout:
-                #print(f'Timed out {datetime.datetime.now().time()}')
                 break
-        print(f'Data recd: {data} {datetime.datetime.now().time()}')
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
