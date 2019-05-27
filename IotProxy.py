@@ -14,24 +14,25 @@
 
 import socket
 import sys
+import os
 import threading
 import json
 from time import sleep
 import requests
 from urllib.parse import urljoin
+import settings as s
+import datetime
 
 
-host = ''
-listening_port = 8080
-max_conn = 5
-buffer_size = 4096
-redirect_sites = {'iot-stg-redirect': 'https://iot-stg.redcatmfg.com',
-                  'iot-redirect': 'https://iot.redcatmfg.com'}
-tokens = {'https://iot-stg.redcatmfg.com': 'Token d9bcbcc509f360b46684f86ca4532e66562dac66',
-          'https://iot.redcatmfg.com': 'Token a0444fc04865a861fb5dc291f50483264e74a8a6'}
+host = os.getenv('HOST', '192.168.0.10')
+listening_port = int(os.getenv('LISTENING_PORT', '8080'))
+max_conn = int(os.getenv('MAX_CONN', '5'))
+buffer_size = int(os.getenv('BUFFER_SIZE', '4096'))
+redirect_sites = s.redirect_sites
 
 
 def handle_connect(conn, addr, data):
+    print(f'Handling connection...{datetime.datetime.now()}\n')
     first_line = data.split('\n')[0]
     method = first_line.split(' ')[0]
     url_parts = parse_url(first_line.split(' ')[1])
@@ -43,15 +44,19 @@ def handle_connect(conn, addr, data):
     elif 'Error' in jsn:
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
     else:
-        srv_response = api_post(url_parts['base'], url_parts['endpoint'],
-                                 tokens[url_parts['base']], jsn)
-
+        b = url_parts['base']
+        e = url_parts['endpoint']
+        srv_response = api_post(url_parts['base'],
+                                url_parts['endpoint'],
+                                redirect_sites[url_parts['target']]['token'],
+                                jsn)
         client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
         client_response += srv_response.reason + '\r\n'
         client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
         client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
     conn.send(client_response.encode('ascii'))
     conn.close()
+    print(f'Done handling connection. {datetime.datetime.now()}')
 
 
 def parse_url(url):
@@ -59,10 +64,11 @@ def parse_url(url):
     url_parts = [i for i in url.split('/') if i]
     target = url_parts[0]
     if target in redirect_sites:
-        base = redirect_sites[target]
+        base = redirect_sites[target]['url']
     else:
         return {'Error': 'Redirect target does not exist'}
-    return {'base': base,
+    return {'target': target,
+            'base': base,
             'endpoint': '/'.join(url_parts[1:]) + '/'
            }
  
@@ -97,8 +103,18 @@ if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Initiate socket
     s.bind((host, listening_port))  # Bind socket for listening
     s.listen(max_conn)  # Start listening
-
+    print(f'Listening on: {host}:{listening_port}')
     while True:
         conn, addr = s.accept()  # Accept incoming client connection
-        data = conn.recv(buffer_size).decode()  # Receive data
+        conn.settimeout(1)
+        data = ''
+        print(f'New connection. {datetime.datetime.now().time()}')
+        while True:
+            try:
+                new_data = conn.recv(buffer_size)  # Receive data
+                if not new_data:
+                    break
+                data += new_data.decode()
+            except socket.timeout:
+                break
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
