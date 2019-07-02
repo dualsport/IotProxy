@@ -114,7 +114,7 @@ if __name__ == "__main__":
                 new_data = conn.recv(buffer_size)  # Receive data
                 if not new_data:
                     break
-                data += new_data.decode()
+                data += new_data.decode(encoding='UTF-8',errors='strict')
             except socket.timeout:
                 break
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()

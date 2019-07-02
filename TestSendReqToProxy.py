@@ -22,7 +22,7 @@ base_url = 'http://192.168.0.5:8080'
 api = 'iot-stg-redirect/data/add/'
 
 data = {'tag': 'test_integer',
-        'value': '129',
+        'value': '987',
         }
 
 r = api_post(base_url, api, data)
