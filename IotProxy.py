@@ -23,14 +23,13 @@ from urllib.parse import urljoin
 import datetime
 import email
 import io
-import settings as s
+import settings
 
 
 host = os.getenv('HOST', '192.168.0.10')
 listening_port = int(os.getenv('LISTENING_PORT', '8080'))
 max_conn = int(os.getenv('MAX_CONN', '5'))
 buffer_size = int(os.getenv('BUFFER_SIZE', '4096'))
-redirect_sites = s.redirect_sites
 
 
 def handle_connect(conn, addr, data):
@@ -70,11 +69,11 @@ def forward_to(req_url, req_headers):
     except KeyError:
         return {'Error': 'X-Device-Name not found in request header'}
     try:
-        site = s.device_sites[device]
+        site = settings.device_sites[device]
     except KeyError:
         return {'Error': 'No site defined for device'}
-    base_url = s.redirect_sites[site]['url']
-    token = s.redirect_sites[site]['token']
+    base_url = settings.redirect_sites[site]['url']
+    token = settings.redirect_sites[site]['token']
 
     url_parts = [i for i in url.split('/') if i]
     endpoint = '/'.join(url_parts[1:]) + '/'
