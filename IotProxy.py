@@ -37,7 +37,7 @@ def handle_connect(conn, addr, data):
     print(f'Handling connection...{datetime.datetime.now()}')
     first_line = data.split('\n')[0]
     method = first_line.split(' ')[0]
-    req_url = parse_url(first_line.split(' ')[1])
+    req_url = first_line.split(' ')[1]
     # split to drop json then and again to drop url parts leaving only headers
     headers_only = data.split('\r\n\r\n')[0].split('\r\n',1)[1]
     # convert to headers as a dict
