@@ -65,9 +65,9 @@ def handle_connect(conn, addr, data):
 
 def forward_to(req_url, req_headers):
     try:
-        device = req_headers['X-Device_Name']
+        device = req_headers['X-Device-Name']
     except KeyError:
-        return {'Error': 'X-Device-Name not found in request header'}
+        return {'Error': 'X-Device-Name request header is missing'}
     try:
         site = settings.device_sites[device]
     except KeyError:
@@ -75,7 +75,7 @@ def forward_to(req_url, req_headers):
     base_url = settings.redirect_sites[site]['url']
     token = settings.redirect_sites[site]['token']
 
-    url_parts = [i for i in url.split('/') if i]
+    url_parts = [i for i in req_url.split('/') if i]
     endpoint = '/'.join(url_parts[1:]) + '/'
     return {'base': base_url,
             'endpoint': endpoint,
