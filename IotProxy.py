@@ -45,8 +45,8 @@ def handle_connect(conn, addr, data):
     jsn = parse_json(data)
     if method != 'POST':
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nMethod ' + method + ' not allowed\r\n'
-    elif 'Error' in url_parts:
-        client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + url_parts['Error'] + '\r\n'
+    elif 'Error' in target:
+        client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + target['Error'] + '\r\n'
     elif 'Error' in jsn:
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
     else:
