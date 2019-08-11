@@ -40,7 +40,7 @@ def handle_connect(conn, addr, data):
     # split to drop json then and again to drop url parts leaving only headers
     headers_only = data.split('\r\n\r\n')[0].split('\r\n',1)[1]
     # convert to headers as a dict
-    headers = email.message_from_file(io.StringIO(headers_only))
+    headers = dict(email.message_from_file(io.StringIO(headers_only)))
     target = forward_to(req_url, headers)
     jsn = parse_json(data)
     if method != 'POST':
