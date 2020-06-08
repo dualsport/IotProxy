@@ -20,35 +20,39 @@ import json
 from time import sleep
 import requests
 from urllib.parse import urljoin
-import settings as s
 import datetime
+import email
+import io
+import settings
 
 
 host = os.getenv('HOST', '192.168.0.10')
 listening_port = int(os.getenv('LISTENING_PORT', '8080'))
 max_conn = int(os.getenv('MAX_CONN', '5'))
 buffer_size = int(os.getenv('BUFFER_SIZE', '4096'))
-redirect_sites = s.redirect_sites
 
 
 def handle_connect(conn, addr, data):
-    print(f'Handling connection...{datetime.datetime.now()}\n')
+    print(f'Handling connection...{datetime.datetime.now()}')
     first_line = data.split('\n')[0]
     method = first_line.split(' ')[0]
-    url_parts = parse_url(first_line.split(' ')[1])
+    req_url = first_line.split(' ')[1]
+    # split to drop json then and again to drop url parts leaving only headers
+    headers_only = data.split('\r\n\r\n')[0].split('\r\n',1)[1]
+    # convert to headers as a dict
+    headers = dict(email.message_from_file(io.StringIO(headers_only)))
+    target = forward_to(req_url, headers)
     jsn = parse_json(data)
     if method != 'POST':
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nMethod ' + method + ' not allowed\r\n'
-    elif 'Error' in url_parts:
-        client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + url_parts['Error'] + '\r\n'
+    elif 'Error' in target:
+        client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + target['Error'] + '\r\n'
     elif 'Error' in jsn:
         client_response = 'HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n' + jsn['Error'] + '\r\n'
     else:
-        b = url_parts['base']
-        e = url_parts['endpoint']
-        srv_response = api_post(url_parts['base'],
-                                url_parts['endpoint'],
-                                redirect_sites[url_parts['target']]['token'],
+        srv_response = api_post(target['base'],
+                                target['endpoint'],
+                                target['token'],
                                 jsn)
         client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
         client_response += srv_response.reason + '\r\n'
@@ -56,22 +60,28 @@ def handle_connect(conn, addr, data):
         client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
     conn.send(client_response.encode('ascii'))
     conn.close()
-    print(f'Done handling connection. {datetime.datetime.now()}')
+    print(f'Done handling connection. {datetime.datetime.now()}\n')
 
 
-def parse_url(url):
-    # Returns base url and api endpoint
-    url_parts = [i for i in url.split('/') if i]
-    target = url_parts[0]
-    if target in redirect_sites:
-        base = redirect_sites[target]['url']
-    else:
-        return {'Error': 'Redirect target does not exist'}
-    return {'target': target,
-            'base': base,
-            'endpoint': '/'.join(url_parts[1:]) + '/'
+def forward_to(req_url, req_headers):
+    try:
+        device = req_headers['X-Device-Name']
+    except KeyError:
+        return {'Error': 'X-Device-Name request header is missing'}
+    try:
+        site = settings.device_sites[device]
+    except KeyError:
+        return {'Error': 'No site defined for device'}
+    base_url = settings.redirect_sites[site]['url']
+    token = settings.redirect_sites[site]['token']
+
+    url_parts = [i for i in req_url.split('/') if i]
+    endpoint = '/'.join(url_parts[1:]) + '/'
+    return {'base': base_url,
+            'endpoint': endpoint,
+            'token': token
            }
- 
+
 
 def parse_json(req_data):
     # Returns valid JSON from request
