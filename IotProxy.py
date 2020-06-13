@@ -7,7 +7,7 @@
 #  'https://actual-site/api/endpoint/' + json data
 # Proxy replies to client with reply from server
 # Each request received starts new thread to handle connection
-# Proxy is supplies authentication to server
+# Proxy supplies authentication to server
 
 # Todo: Handle internet outage - Store request locally, return 202 Accepted to client
 
@@ -24,6 +24,7 @@ import datetime
 import email
 import io
 import settings
+from collections import namedtuple
 
 
 host = os.getenv('HOST', '192.168.0.10')
@@ -54,10 +55,13 @@ def handle_connect(conn, addr, data):
                                 target['endpoint'],
                                 target['token'],
                                 jsn)
-        client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
-        client_response += srv_response.reason + '\r\n'
-        client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
-        client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
+        if srv_response.status_code == 201:
+            client_response = 'HTTP/1.0 ' + str(srv_response.status_code) + ' '
+            client_response += srv_response.reason + '\r\n'
+            client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
+            client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
+        else:
+            client_response = 'HTTP/1.0 500 Sever Error\r\nContent-Type: text/plain\r\n\r\n' + srv_response.error + '\r\n'
     conn.send(client_response.encode('ascii'))
     conn.close()
     print(f'Done handling connection. {datetime.datetime.now()}\n')
@@ -105,7 +109,14 @@ def api_post(base_url, api, token, parameters):
                'Content-Type': 'application/json',
                'Authorization': token,
               }
-    post = requests.post(url=api_endpoint, headers=headers, json=parameters)
+    try:
+        post = requests.post(url=api_endpoint, headers=headers, json=parameters)
+    except requests.exceptions.ConnectionError as e:
+        print(f'[Exception in api_post] - Message: {e}')
+        reply = namedtuple('reply', ['status_code', 'Error'])
+        reply.status_code = 500
+        reply.error = 'Unable to connect to host'
+        return reply
     return post
 
 
@@ -125,7 +136,7 @@ if __name__ == "__main__":
                 if not new_data:
                     break
                 print(f'New data: {new_data}')
-                data += new_data.decode(encoding='UTF-8',errors='strict')
+                data += new_data.decode(encoding='UTF-8', errors='strict')
             except socket.timeout:
                 break
         threading.Thread(target=handle_connect, args=(conn, addr, data)).start()
