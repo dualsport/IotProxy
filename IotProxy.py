@@ -61,7 +61,10 @@ def handle_connect(conn, addr, data):
             client_response += 'Content-Type: ' + srv_response.headers['Content-Type']
             client_response += '\r\n\r\n' + srv_response.content.decode('ASCII') + '\r\n'
         else:
-            client_response = 'HTTP/1.0 500 Sever Error\r\nContent-Type: text/plain\r\n\r\n' + srv_response.error + '\r\n'
+            # Add error text if srv_response.error attribute does not exist
+            error_txt = getattr(srv_response, 'error', f"Server response: {srv_response.status_code}")
+            print(f"[APP_LOG] Received error response from server: {error_txt}")
+            client_response = 'HTTP/1.0 500 Sever Error\r\nContent-Type: text/plain\r\n\r\n' + error_txt + '\r\n'
     conn.send(client_response.encode('ascii'))
     conn.close()
     print(f'Done handling connection. {datetime.datetime.now()}\n')
